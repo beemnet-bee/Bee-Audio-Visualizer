@@ -1,8 +1,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import FileUpload from './components/FileUpload';
-import Visualizer, { VisualizerType, BarStyle } from './components/Visualizer';
+import Visualizer, { VisualizerType, BarStyle, ParticleStyle } from './components/Visualizer';
 import Controls, { LyricSettings, LogoSettings } from './components/Controls';
 import Icon from './components/Icon';
+import SplashScreen from './components/SplashScreen';
 
 export interface TimedLyric {
   time: number;
@@ -15,6 +16,7 @@ export interface Resolution {
 }
 
 const App: React.FC = () => {
+  const [showSplash, setShowSplash] = useState<boolean>(true);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
@@ -26,26 +28,29 @@ const App: React.FC = () => {
   // Visualizer settings
   const [visualizerType, setVisualizerType] = useState<VisualizerType>('bar');
   const [visualizerColor, setVisualizerColor] = useState<string>('#007BFF');
-  const [color2, setColor2] = useState<string>('#00C6FF');
+  const [color2, setColor2] = useState<string>('#4DABFF');
   const [useGradient, setUseGradient] = useState<boolean>(true);
   const [barCount, setBarCount] = useState<number>(128);
   const [smoothing, setSmoothing] = useState<number>(0.5);
   const [barStyle, setBarStyle] = useState<BarStyle>('rounded');
   const [visualizerPosition, setVisualizerPosition] = useState<number>(50);
+  const [particleStyle, setParticleStyle] = useState<ParticleStyle>('burst');
 
   // Background settings
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [backgroundColor, setBackgroundColor] = useState<string>('#FFFFFF');
   const [backgroundOpacity, setBackgroundOpacity] = useState<number>(0.3);
   const [backgroundBlur, setBackgroundBlur] = useState<number>(4);
+  const [backgroundVignette, setBackgroundVignette] = useState<boolean>(true);
+  const [backgroundNoise, setBackgroundNoise] = useState<number>(0.05);
   
   // Lyrics settings
   const [timedLyrics, setTimedLyrics] = useState<TimedLyric[]>([]);
   const [activeLyricIndex, setActiveLyricIndex] = useState<number>(-1);
   const [lyricSettings, setLyricSettings] = useState<LyricSettings>({
     fontSize: 32,
-    fontColor: '#1A202C',
-    highlightColor: 'rgba(0, 123, 255, 0.2)',
+    fontColor: '#212529',
+    highlightColor: 'rgba(0, 123, 255, 0.15)',
     positionY: 50,
     positionX: 50,
     fontFamily: 'Ubuntu, sans-serif'
@@ -74,6 +79,11 @@ const App: React.FC = () => {
   const recordedChunksRef = useRef<Blob[]>([]);
   const destinationNodeRef = useRef<MediaStreamAudioDestinationNode | null>(null);
   const isAudioContextSetup = useRef<boolean>(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const processAudioForWaveform = async (file: File) => {
     const tempAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -264,21 +274,25 @@ const App: React.FC = () => {
     const foundIndex = timedLyrics.findIndex(lyric => lyric.time === sortedLyrics[newIndex]?.time && lyric.text === sortedLyrics[newIndex]?.text);
     setActiveLyricIndex(foundIndex);
   }, [progress, timedLyrics]);
+  
+  if (showSplash) {
+      return <SplashScreen />;
+  }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden flex flex-col border border-gray-200">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 lg:p-6">
+      <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl shadow-gray-200 overflow-hidden flex flex-col border border-gray-200">
         <header className="p-5 border-b border-gray-200 flex items-center space-x-4">
           <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-md">
-            <Icon name="music" className="w-6 h-6 text-white" />
+            <Icon name="logo" className="w-9 h-9 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-800 tracking-wide">Audio Visualizer Pro</h1>
+            <h1 className="text-xl font-bold text-gray-800 tracking-wide">GB - Audio Visualizer</h1>
             <p className="text-sm text-gray-500">Create stunning, lyric-synced visuals for your music</p>
           </div>
         </header>
 
-        <main className="flex-grow p-6 bg-gray-50">
+        <main className="flex-grow p-6 bg-gray-50/50">
           {!audioFile ? (
             <FileUpload onFileChange={handleFileChange} />
           ) : (
@@ -301,7 +315,10 @@ const App: React.FC = () => {
                 backgroundColor={backgroundColor}
                 backgroundOpacity={backgroundOpacity}
                 backgroundBlur={backgroundBlur}
+                backgroundVignette={backgroundVignette}
+                backgroundNoise={backgroundNoise}
                 barStyle={barStyle}
+                particleStyle={particleStyle}
                 activeLyric={activeLyricIndex > -1 ? timedLyrics[activeLyricIndex] : null}
                 lyricSettings={lyricSettings}
                 resolution={resolution}
@@ -351,8 +368,14 @@ const App: React.FC = () => {
                 onBackgroundOpacityChange={setBackgroundOpacity}
                 backgroundBlur={backgroundBlur}
                 onBackgroundBlurChange={setBackgroundBlur}
+                backgroundVignette={backgroundVignette}
+                onBackgroundVignetteChange={setBackgroundVignette}
+                backgroundNoise={backgroundNoise}
+                onBackgroundNoiseChange={setBackgroundNoise}
                 barStyle={barStyle}
                 onBarStyleChange={setBarStyle}
+                particleStyle={particleStyle}
+                onParticleStyleChange={setParticleStyle}
                 timedLyrics={timedLyrics}
                 onTimedLyricsChange={setTimedLyrics}
                 lyricSettings={lyricSettings}

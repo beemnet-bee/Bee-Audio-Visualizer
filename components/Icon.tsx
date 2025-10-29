@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface IconProps {
-  name: 'play' | 'pause' | 'upload' | 'music' | 'change' | 'export' | 'image' | 'close' | 'clock' | 'screen' | 'visualizer' | 'lyrics' | 'layers';
+  name: 'play' | 'pause' | 'upload' | 'music' | 'change' | 'export' | 'image' | 'close' | 'clock' | 'screen' | 'visualizer' | 'lyrics' | 'layers' | 'logo';
   className?: string;
 }
 
@@ -71,6 +71,14 @@ const Icon: React.FC<IconProps> = ({ name, className = "w-6 h-6" }) => {
     layers: (
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6.115 5.19l.319 1.913A6 6 0 0012 12h.008a6 6 0 005.566-4.897l.319-1.913A2.25 2.25 0 0015.385 3H8.615a2.25 2.25 0 00-2.5 2.19zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+      </svg>
+    ),
+    logo: (
+       <svg viewBox="0 0 100 100" fill="currentColor" className={className}>
+        <g transform="translate(0, 5)">
+            <text x="50" y="40" fontFamily="Ubuntu, sans-serif" fontSize="40" fill="currentColor" textAnchor="middle" dominantBaseline="middle" fontWeight="bold">GB</text>
+            <path d="M20 70 Q 35 55, 50 70 T 80 70" stroke="currentColor" strokeWidth="6" fill="none" strokeLinecap="round"/>
+        </g>
       </svg>
     )
   };

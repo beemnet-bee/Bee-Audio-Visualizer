@@ -3,7 +3,8 @@ import { TimedLyric, Resolution } from '../App';
 import { LyricSettings, LogoSettings } from './Controls';
 
 export type VisualizerType = 'bar' | 'bar-center' | 'circle' | 'wave' | 'wave-fill' | 'particles' | 'progress-wave';
-export type BarStyle = 'sharp' | 'rounded';
+export type BarStyle = 'sharp' | 'rounded' | 'outline';
+export type ParticleStyle = 'burst' | 'fountain' | 'gravity';
 
 interface VisualizerProps {
   analyserNode: AnalyserNode | null;
@@ -18,7 +19,10 @@ interface VisualizerProps {
   backgroundColor: string;
   backgroundOpacity: number;
   backgroundBlur: number;
+  backgroundVignette: boolean;
+  backgroundNoise: number;
   barStyle: BarStyle;
+  particleStyle: ParticleStyle;
   activeLyric: TimedLyric | null;
   lyricSettings: LyricSettings;
   resolution: Resolution;
@@ -36,6 +40,7 @@ interface Particle {
     x: number; y: number;
     vx: number; vy: number;
     life: number; size: number;
+    gravity?: number;
 }
 
 const formatTime = (seconds: number): string => {
@@ -51,7 +56,8 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
   analyserNode, isPlaying, barCount, color, color2, useGradient, type, smoothing,
   backgroundImage, backgroundColor, backgroundOpacity, backgroundBlur, barStyle,
   activeLyric, lyricSettings, resolution, visualizerPosition, logoImage, logoSettings,
-  showTimer, showProgressBar, progress, duration, waveformData
+  showTimer, showProgressBar, progress, duration, waveformData, particleStyle,
+  backgroundVignette, backgroundNoise
 }, ref) => {
   const animationFrameIdRef = useRef<number>(0);
   const prevDataRef = useRef<number[]>([]);
@@ -84,7 +90,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
       return;
     }
     
-    const canvasCtx = canvas.getContext('2d');
+    const canvasCtx = canvas.getContext('2d', { willReadFrequently: true });
     if (!canvasCtx) return;
 
     const bufferLength = analyserNode.frequencyBinCount;
@@ -103,6 +109,10 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         canvasCtx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
         canvasCtx.restore();
       }
+
+      if (backgroundVignette) drawVignette(canvasCtx, canvas.width, canvas.height);
+      if (backgroundNoise > 0) drawNoise(canvasCtx, canvas.width, canvas.height, backgroundNoise);
+
 
       if (type !== 'progress-wave') {
         if (type === 'wave' || type === 'wave-fill' || type === 'particles') analyserNode.getByteTimeDomainData(dataArray);
@@ -154,11 +164,17 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         const barSpacing = (w / barCount) * 0.2;
         const cornerRadius = barStyle === 'rounded' ? barWidth / 2 : 0;
         let x = 0;
+        ctx.lineWidth = 3;
         for (let i = 0; i < barCount; i++) {
             const barHeight = Math.max(cornerRadius * 2, applySmoothing((data[i] / 255) * (h * 0.8), i));
             ctx.beginPath();
-            ctx.roundRect(x, h - barHeight, barWidth, barHeight, [cornerRadius, cornerRadius, 0, 0]);
-            ctx.fill();
+            if (barStyle === 'outline') {
+                ctx.roundRect(x + ctx.lineWidth/2, h - barHeight + ctx.lineWidth/2, barWidth - ctx.lineWidth, barHeight - ctx.lineWidth, cornerRadius);
+                ctx.stroke();
+            } else {
+                ctx.roundRect(x, h - barHeight, barWidth, barHeight, [cornerRadius, cornerRadius, 0, 0]);
+                ctx.fill();
+            }
             x += barWidth + barSpacing;
         }
     };
@@ -167,11 +183,17 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         const barSpacing = (w / barCount) * 0.2;
         const cornerRadius = barStyle === 'rounded' ? barWidth / 2 : 0;
         let x = 0;
+        ctx.lineWidth = 3;
         for (let i = 0; i < barCount; i++) {
             const barHeight = Math.max(cornerRadius * 2, applySmoothing((data[i] / 255) * h * 0.8, i));
             ctx.beginPath();
-            ctx.roundRect(x, (h - barHeight) / 2, barWidth, barHeight, cornerRadius);
-            ctx.fill();
+             if (barStyle === 'outline') {
+                ctx.roundRect(x + ctx.lineWidth/2, (h - barHeight) / 2 + ctx.lineWidth/2, barWidth - ctx.lineWidth, barHeight - ctx.lineWidth, cornerRadius);
+                ctx.stroke();
+            } else {
+                ctx.roundRect(x, (h - barHeight) / 2, barWidth, barHeight, cornerRadius);
+                ctx.fill();
+            }
             x += barWidth + barSpacing;
         }
     };
@@ -182,7 +204,9 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         const maxBarLength = Math.min(w, h) * 0.25;
         const sliceAngle = (Math.PI * 2) / barCount;
         ctx.lineWidth = (w / barCount) * 0.8;
+        if (barStyle === 'outline') ctx.lineWidth = 3;
         ctx.lineCap = barStyle === 'rounded' ? 'round' : 'butt';
+
         for (let i = 0; i < barCount; i++) {
             const barLength = applySmoothing((data[i] / 255) * maxBarLength, i);
             const angle = i * sliceAngle - Math.PI / 2;
@@ -202,14 +226,12 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         if (isFilled) { ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); ctx.fill(); }
         else { ctx.lineTo(w, centerY); ctx.stroke(); }
     };
-    // Fix: Pass fillStyle to drawProgressWave to fix scope issue.
     const drawProgressWave = (ctx: CanvasRenderingContext2D, data: number[], w: number, h: number, fillStyle: string | CanvasGradient) => {
       const barWidth = w / data.length;
       const progressIndex = Math.floor((progress / duration) * data.length);
       for(let i=0; i < data.length; i++) {
           const barHeight = data[i] * h * 0.8;
-          // Fix: Use passed fillStyle variable.
-          ctx.fillStyle = i <= progressIndex ? fillStyle : '#cccccc';
+          ctx.fillStyle = i <= progressIndex ? fillStyle as string : '#E9ECEF';
           ctx.fillRect(i * barWidth, (h - barHeight) / 2, barWidth - 1, barHeight);
       }
     };
@@ -217,17 +239,25 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         let bass = data.slice(0, bufferLength / 4).reduce((a, b) => a + b) / (bufferLength / 4);
         if (bass > 140) { // Spawn particles on a bass hit
             for (let i = 0; i < 5; i++) {
+                let p: Partial<Particle> = {};
+                if (particleStyle === 'fountain') {
+                    p = { x: w * Math.random(), y: h, vx: (Math.random() - 0.5) * 2, vy: -Math.random() * 5 - 2 };
+                } else { // burst and gravity
+                    p = { x: w / 2, y: h / 2, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4 };
+                }
+                
                 particlesRef.current.push({
-                    x: w / 2, y: h / 2,
-                    vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4,
-                    life: 100, size: Math.random() * 5 + 2,
-                });
+                    ...p, life: 100, size: Math.random() * 5 + 2,
+                    gravity: particleStyle === 'gravity' ? 0.1 : 0,
+                } as Particle);
             }
         }
         // Update and draw particles
         for (let i = particlesRef.current.length - 1; i >= 0; i--) {
             let p = particlesRef.current[i];
-            p.x += p.vx; p.y += p.vy; p.life -= 1; p.size *= 0.98;
+            p.x += p.vx; p.y += p.vy; 
+            if (p.gravity) p.vy += p.gravity;
+            p.life -= 1; p.size *= 0.98;
             if (p.life <= 0 || p.size < 0.5) particlesRef.current.splice(i, 1);
             else {
                 ctx.globalAlpha = p.life / 100;
@@ -235,6 +265,26 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
             }
         }
         ctx.globalAlpha = 1;
+    };
+    const drawVignette = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+        ctx.save();
+        const gradient = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)/3, w/2, h/2, Math.min(w,h));
+        gradient.addColorStop(0, 'rgba(0,0,0,0)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0.4)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0,0,w,h);
+        ctx.restore();
+    };
+    const drawNoise = (ctx: CanvasRenderingContext2D, w: number, h: number, amount: number) => {
+        const imageData = ctx.getImageData(0,0,w,h);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const random = (Math.random() - 0.5) * 255 * amount;
+            data[i] += random;
+            data[i+1] += random;
+            data[i+2] += random;
+        }
+        ctx.putImageData(imageData, 0, 0);
     };
     const drawLyrics = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
       if (!activeLyric) return;
@@ -248,7 +298,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
       ctx.roundRect(xPos - (textMetrics.width / 2) - padding, yPos - (lyricSettings.fontSize / 2) - padding, textMetrics.width + (padding * 2), lyricSettings.fontSize + (padding * 2), 15);
       ctx.fill(); ctx.restore();
       ctx.fillStyle = lyricSettings.fontColor;
-      ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 5;
+      ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 8;
       ctx.fillText(activeLyric.text, xPos, yPos);
       ctx.shadowBlur = 0;
     };
@@ -274,13 +324,11 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         ctx.fillText(text, w - (w * 0.02), h - (w * 0.02));
         ctx.shadowBlur = 0;
     };
-    // Fix: Pass fillStyle to drawProgressBar to fix scope issue.
     const drawProgressBar = (ctx: CanvasRenderingContext2D, w: number, h: number, fillStyle: string | CanvasGradient) => {
         const barHeight = h * 0.01;
         const yPos = showProgressBar === 'top' ? 0 : h - barHeight;
-        ctx.fillStyle = '#cccccc';
+        ctx.fillStyle = '#E9ECEF';
         ctx.fillRect(0, yPos, w, barHeight);
-        // Fix: Use passed fillStyle variable.
         ctx.fillStyle = fillStyle;
         ctx.fillRect(0, yPos, w * (progress/duration), barHeight);
     };
@@ -288,7 +336,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
     draw();
 
     return () => cancelAnimationFrame(animationFrameIdRef.current);
-  }, [analyserNode, isPlaying, barCount, color, color2, useGradient, type, smoothing, ref, bgImage, backgroundColor, backgroundOpacity, backgroundBlur, barStyle, activeLyric, lyricSettings, visualizerPosition, logoImg, logoSettings, showTimer, showProgressBar, progress, duration, waveformData]);
+  }, [analyserNode, isPlaying, barCount, color, color2, useGradient, type, smoothing, ref, bgImage, backgroundColor, backgroundOpacity, backgroundBlur, barStyle, activeLyric, lyricSettings, visualizerPosition, logoImg, logoSettings, showTimer, showProgressBar, progress, duration, waveformData, particleStyle, backgroundVignette, backgroundNoise]);
   
   useEffect(() => {
     const canvas = (ref as React.RefObject<HTMLCanvasElement>)?.current;

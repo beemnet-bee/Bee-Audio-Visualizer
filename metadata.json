@@ -1,5 +1,5 @@
 {
-  "name": "Audio Visualizer Bar Generator",
-  "description": "An interactive music visualizer that generates animated bars from an uploaded audio file. Customize the color and style of the visualization, perfect for creating engaging backgrounds for YouTube videos.",
+  "name": "GB - Audio Visualizer",
+  "description": "An interactive music visualizer that generates animated visuals from an uploaded audio file. Customize visualizer styles (bars, waves, particles), add brand logos, sync lyrics, and apply background effects. Perfect for creating engaging videos for YouTube and social media.",
   "requestFramePermissions": []
 }

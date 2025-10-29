@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Icon from './Icon';
-import { VisualizerType, BarStyle } from './Visualizer';
+import { VisualizerType, BarStyle, ParticleStyle } from './Visualizer';
 import { TimedLyric, Resolution } from '../App';
 
 export interface LyricSettings {
@@ -49,8 +49,14 @@ interface ControlsProps {
   onBackgroundOpacityChange: (value: number) => void;
   backgroundBlur: number;
   onBackgroundBlurChange: (value: number) => void;
+  backgroundVignette: boolean;
+  onBackgroundVignetteChange: (vignette: boolean) => void;
+  backgroundNoise: number;
+  onBackgroundNoiseChange: (noise: number) => void;
   barStyle: BarStyle;
   onBarStyleChange: (style: BarStyle) => void;
+  particleStyle: ParticleStyle;
+  onParticleStyleChange: (style: ParticleStyle) => void;
   timedLyrics: TimedLyric[];
   onTimedLyricsChange: (lyrics: TimedLyric[]) => void;
   lyricSettings: LyricSettings;
@@ -107,7 +113,7 @@ const Controls: React.FC<ControlsProps> = (props) => {
   
   const TabButton: React.FC<{tab: ActiveTab, label: string, icon: React.ReactElement}> = ({tab, label, icon}) => (
     <button onClick={() => setActiveTab(tab)} 
-        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${activeTab === tab ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200 hover:text-gray-800'}`}>
+        className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${activeTab === tab ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'}`}>
         {icon}
         {label}
     </button>
@@ -135,13 +141,13 @@ const Controls: React.FC<ControlsProps> = (props) => {
               <span className="text-sm font-bold tracking-wider">{isRecording ? 'RECORDING...' : 'EXPORT'}</span>
           </button>
           </div>
-          <button onClick={onPlayPause} disabled={!isReady || isRecording} className="p-4 rounded-full text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center w-16 h-16 bg-blue-500 shadow-lg shadow-blue-500/40 hover:bg-blue-600">
+          <button onClick={onPlayPause} disabled={!isReady || isRecording} className="p-4 rounded-full text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center w-16 h-16 bg-blue-500 shadow-lg shadow-blue-500/30 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300">
             <Icon name={isPlaying ? 'pause' : 'play'} className="w-7 h-7" />
           </button>
       </div>
 
       {/* Settings Tabs */}
-      <div className="p-1.5 bg-gray-100 rounded-lg flex items-center justify-center space-x-1 md:space-x-2 border border-gray-200">
+      <div className="p-1.5 bg-gray-100/80 rounded-lg flex items-center justify-center space-x-1 md:space-x-2 border border-gray-200">
         <TabButton tab="visualizer" label="Visualizer" icon={<Icon name="visualizer" className="w-4 h-4"/>}/>
         <TabButton tab="background" label="Background" icon={<Icon name="image" className="w-4 h-4"/>}/>
         <TabButton tab="lyrics" label="Lyrics" icon={<Icon name="lyrics" className="w-4 h-4"/>}/>
@@ -173,12 +179,12 @@ const SettingGroup: React.FC<{title: string, children: React.ReactNode}> = ({tit
 const FormLabel: React.FC<{htmlFor?: string, children: React.ReactNode, value?: string | number}> = ({htmlFor, children, value}) => (
     <label htmlFor={htmlFor} className="text-sm font-medium text-gray-700 flex justify-between items-center">
         <span>{children}</span>
-        {value !== undefined && <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">{value}</span>}
+        {value !== undefined && <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">{value}</span>}
     </label>
 );
 
 const Select: React.FC<{value: string, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void, children: React.ReactNode}> = ({value, onChange, children}) => (
-    <select value={value} onChange={onChange} className="w-full bg-white border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5 pr-10 appearance-none bg-no-repeat bg-[position:right_0.7rem_center] bg-[size:1.2em_1.2em] bg-[url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%23007BFF%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e')]">
+    <select value={value} onChange={onChange} className="w-full bg-white border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-500 p-2.5 pr-10 appearance-none bg-no-repeat bg-[position:right_0.7rem_center] bg-[size:1.2em_1.2em] bg-[url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%23007BFF%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e')]">
         {children}
     </select>
 );
@@ -187,7 +193,7 @@ const VisualizerSettings: React.FC<ControlsProps> = ({
     visualizerType, onVisualizerTypeChange, barCount, onBarCountChange, 
     smoothing, onSmoothingChange, barStyle, onBarStyleChange,
     color, onColorChange, color2, onColor2Change, useGradient, onUseGradientChange,
-    visualizerPosition, onVisualizerPositionChange
+    visualizerPosition, onVisualizerPositionChange, particleStyle, onParticleStyleChange
 }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         <SettingGroup title="Shape & Style">
@@ -209,12 +215,13 @@ const VisualizerSettings: React.FC<ControlsProps> = ({
                     <input id="bar-count" type="range" min="32" max="256" step="16" value={barCount} onChange={(e) => onBarCountChange(Number(e.target.value))} />
                 </div>
             }
-            { visualizerType.includes('bar') &&
+            { (visualizerType.includes('bar') || visualizerType.includes('circle')) &&
                 <div className="space-y-2">
                     <FormLabel>Bar Style</FormLabel>
                     <Select value={barStyle} onChange={(e) => onBarStyleChange(e.target.value as BarStyle)}>
                         <option value="rounded">Rounded</option>
                         <option value="sharp">Sharp</option>
+                        <option value="outline">Outline</option>
                     </Select>
                 </div>
             }
@@ -222,6 +229,16 @@ const VisualizerSettings: React.FC<ControlsProps> = ({
                 <FormLabel htmlFor="smoothing" value={smoothing.toFixed(2)}>Responsiveness</FormLabel>
                 <input id="smoothing" type="range" min="0" max="0.95" step="0.05" value={smoothing} onChange={(e) => onSmoothingChange(Number(e.target.value))} />
             </div>
+            { visualizerType === 'particles' && 
+                 <div className="space-y-2">
+                    <FormLabel>Particle Style</FormLabel>
+                    <Select value={particleStyle} onChange={(e) => onParticleStyleChange(e.target.value as ParticleStyle)}>
+                        <option value="burst">Burst</option>
+                        <option value="fountain">Fountain</option>
+                        <option value="gravity">Gravity</option>
+                    </Select>
+                </div>
+            }
         </SettingGroup>
 
          <SettingGroup title="Position">
@@ -236,8 +253,8 @@ const VisualizerSettings: React.FC<ControlsProps> = ({
                 <div className="flex items-center gap-4 p-2 bg-gray-100 rounded-lg border border-gray-200">
                     <input type="checkbox" id="gradient-toggle" checked={useGradient} onChange={(e) => onUseGradientChange(e.target.checked)} className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"/>
                     <label htmlFor="gradient-toggle" className="text-sm text-gray-700 font-medium">Gradient</label>
-                    <div className="w-8 h-8 rounded-md overflow-hidden border-2 border-gray-300"><input id="color-picker" type="color" value={color} onChange={(e) => onColorChange(e.target.value)} className="w-12 h-12 -translate-x-2 -translate-y-2 cursor-pointer" /></div>
-                    {useGradient && <div className="w-8 h-8 rounded-md overflow-hidden border-2 border-gray-300"><input id="color-picker-2" type="color" value={color2} onChange={(e) => onColor2Change(e.target.value)} className="w-12 h-12 -translate-x-2 -translate-y-2 cursor-pointer" /></div>}
+                    <div className="w-8 h-8 rounded-md overflow-hidden border-2 border-white shadow-sm"><input id="color-picker" type="color" value={color} onChange={(e) => onColorChange(e.target.value)} className="w-12 h-12 -translate-x-2 -translate-y-2 cursor-pointer" /></div>
+                    {useGradient && <div className="w-8 h-8 rounded-md overflow-hidden border-2 border-white shadow-sm"><input id="color-picker-2" type="color" value={color2} onChange={(e) => onColor2Change(e.target.value)} className="w-12 h-12 -translate-x-2 -translate-y-2 cursor-pointer" /></div>}
                 </div>
             </div>
         </SettingGroup>
@@ -247,35 +264,51 @@ const VisualizerSettings: React.FC<ControlsProps> = ({
 const BackgroundSettings: React.FC<ControlsProps> = ({
     onBackgroundChange, onClearBackground, hasBackground, backgroundColor,
     onBackgroundColorChange, backgroundOpacity, onBackgroundOpacityChange,
-    backgroundBlur, onBackgroundBlurChange
+    backgroundBlur, onBackgroundBlurChange, backgroundVignette, onBackgroundVignetteChange,
+    backgroundNoise, onBackgroundNoiseChange
 }) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-        <div className="space-y-2">
-            <FormLabel>Background Image</FormLabel>
-            <div className="flex items-center gap-2">
-                <label htmlFor="bg-upload" className="flex-grow text-center px-4 py-2.5 text-sm font-medium text-gray-800 bg-white rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-300">
-                    Upload Image
-                </label>
-                <input id="bg-upload" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files && onBackgroundChange(e.target.files[0])} />
-                {hasBackground && (
-                    <button onClick={onClearBackground} className="p-2.5 rounded-full bg-red-100 hover:bg-red-200 transition-colors border border-gray-300" title="Remove background">
-                        <Icon name="close" className="w-5 h-5 text-red-600"/>
-                    </button>
-                )}
+    <div>
+        <SettingGroup title="Image & Color">
+            <div className="space-y-2">
+                <FormLabel>Background Image</FormLabel>
+                <div className="flex items-center gap-2">
+                    <label htmlFor="bg-upload" className="flex-grow text-center px-4 py-2.5 text-sm font-medium text-gray-800 bg-white rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-300">
+                        Upload Image
+                    </label>
+                    <input id="bg-upload" type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files && onBackgroundChange(e.target.files[0])} />
+                    {hasBackground && (
+                        <button onClick={onClearBackground} className="p-2.5 rounded-full bg-red-100 hover:bg-red-200 transition-colors border border-gray-300" title="Remove background">
+                            <Icon name="close" className="w-5 h-5 text-red-600"/>
+                        </button>
+                    )}
+                </div>
             </div>
-        </div>
-        <div className="space-y-2">
-             <FormLabel>Background Color</FormLabel>
-             <input type="color" value={backgroundColor} onChange={(e) => onBackgroundColorChange(e.target.value)} className="w-full h-11 p-0 border-0 bg-transparent rounded cursor-pointer"/>
-        </div>
-        <div className="space-y-2">
-            <FormLabel htmlFor="bg-opacity" value={backgroundOpacity.toFixed(2)}>Image Opacity</FormLabel>
-            <input id="bg-opacity" type="range" min="0" max="1" step="0.05" value={backgroundOpacity} onChange={(e) => onBackgroundOpacityChange(Number(e.target.value))} />
-        </div>
-        <div className="space-y-2">
-            <FormLabel htmlFor="bg-blur" value={`${backgroundBlur}px`}>Image Blur</FormLabel>
-            <input id="bg-blur" type="range" min="0" max="20" step="1" value={backgroundBlur} onChange={(e) => onBackgroundBlurChange(Number(e.target.value))} />
-        </div>
+            <div className="space-y-2">
+                <FormLabel>Background Color</FormLabel>
+                <div className="w-full h-11 p-1 bg-white rounded-lg border border-gray-300"><input type="color" value={backgroundColor} onChange={(e) => onBackgroundColorChange(e.target.value)} className="w-full h-full p-0 border-0 rounded-md cursor-pointer"/></div>
+            </div>
+            <div className="space-y-2">
+                <FormLabel htmlFor="bg-opacity" value={backgroundOpacity.toFixed(2)}>Image Opacity</FormLabel>
+                <input id="bg-opacity" type="range" min="0" max="1" step="0.05" value={backgroundOpacity} onChange={(e) => onBackgroundOpacityChange(Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+                <FormLabel htmlFor="bg-blur" value={`${backgroundBlur}px`}>Image Blur</FormLabel>
+                <input id="bg-blur" type="range" min="0" max="20" step="1" value={backgroundBlur} onChange={(e) => onBackgroundBlurChange(Number(e.target.value))} />
+            </div>
+        </SettingGroup>
+        <SettingGroup title="Effects">
+            <div className="space-y-2">
+                <FormLabel>Vignette</FormLabel>
+                <div className="flex items-center p-2 bg-gray-100 rounded-lg border border-gray-200">
+                    <input type="checkbox" id="vignette-toggle" checked={backgroundVignette} onChange={(e) => onBackgroundVignetteChange(e.target.checked)} className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"/>
+                    <label htmlFor="vignette-toggle" className="ml-2 text-sm text-gray-700 font-medium">Enable dark vignette</label>
+                </div>
+            </div>
+            <div className="space-y-2">
+                <FormLabel htmlFor="bg-noise" value={backgroundNoise.toFixed(2)}>Grain / Noise</FormLabel>
+                <input id="bg-noise" type="range" min="0" max="0.3" step="0.01" value={backgroundNoise} onChange={(e) => onBackgroundNoiseChange(Number(e.target.value))} />
+            </div>
+        </SettingGroup>
     </div>
 );
 
@@ -296,17 +329,17 @@ const LyricsSettings: React.FC<LyricsSettingsProps> = ({
                     <div className="space-y-2">
                         <FormLabel htmlFor="lyrics-input">Paste Lyrics</FormLabel>
                         <textarea id="lyrics-input" rows={6} value={lyricsText} onChange={(e) => onLyricsTextChange(e.target.value)}
-                            className="w-full bg-white border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2.5"
+                            className="w-full bg-white border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-500 p-2.5"
                             placeholder="Paste your lyrics here, one line per entry..."
                         />
                     </div>
-                    <button onClick={onLyricsParse} className="w-full px-4 py-2.5 text-sm font-bold tracking-wider text-white bg-blue-600 rounded-lg hover:bg-blue-500 transition-colors">
+                    <button onClick={onLyricsParse} className="w-full px-4 py-2.5 text-sm font-bold tracking-wider text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
                         LOAD LYRICS
                     </button>
                 </div>
                  <div className="space-y-2 col-span-1 lg:col-span-1">
                      <FormLabel>Synced Lyrics Editor</FormLabel>
-                     <div className="h-64 overflow-y-auto bg-gray-50 rounded-lg p-2 space-y-2 border border-gray-200">
+                     <div className="h-64 overflow-y-auto bg-gray-50/80 rounded-lg p-2 space-y-2 border border-gray-200">
                         {timedLyrics.length > 0 ? timedLyrics.map((lyric, index) => (
                             <div key={index} className={`flex items-center gap-2 p-2 rounded transition-colors ${activeLyricIndex === index ? 'bg-blue-100' : 'hover:bg-gray-100'}`}>
                                 <button onClick={() => onSyncLyricTime(index)} title="Sync to current time" className="p-1.5 rounded bg-white hover:bg-gray-100 border border-gray-200"><Icon name="clock" className="w-4 h-4 text-blue-500"/></button>
@@ -337,9 +370,9 @@ const LyricsSettings: React.FC<LyricsSettingsProps> = ({
                      <FormLabel>Colors</FormLabel>
                      <div className="flex items-center gap-4 p-2 bg-gray-100 rounded-lg border border-gray-200">
                         <label htmlFor="font-color" className="text-sm text-gray-700 font-medium">Font:</label>
-                        <div className="w-8 h-8 rounded-md overflow-hidden border-2 border-gray-300"><input id="font-color" type="color" value={lyricSettings.fontColor} onChange={(e) => onLyricSettingsChange({...lyricSettings, fontColor: e.target.value})} className="w-12 h-12 -translate-x-2 -translate-y-2 cursor-pointer" /></div>
+                        <div className="w-8 h-8 rounded-md overflow-hidden border-2 border-white shadow-sm"><input id="font-color" type="color" value={lyricSettings.fontColor} onChange={(e) => onLyricSettingsChange({...lyricSettings, fontColor: e.target.value})} className="w-12 h-12 -translate-x-2 -translate-y-2 cursor-pointer" /></div>
                          <label htmlFor="highlight-color" className="text-sm text-gray-700 font-medium">Highlight:</label>
-                        <div className="w-8 h-8 rounded-md overflow-hidden border-2 border-gray-300"><input id="highlight-color" type="color" value={lyricSettings.highlightColor} onChange={(e) => onLyricSettingsChange({...lyricSettings, highlightColor: e.target.value})} className="w-12 h-12 -translate-x-2 -translate-y-2 cursor-pointer" /></div>
+                        <div className="w-8 h-8 rounded-md overflow-hidden border-2 border-white shadow-sm"><input id="highlight-color" type="color" value={lyricSettings.highlightColor} onChange={(e) => onLyricSettingsChange({...lyricSettings, highlightColor: e.target.value})} className="w-12 h-12 -translate-x-2 -translate-y-2 cursor-pointer" /></div>
                     </div>
                 </div>
                 <div className="space-y-2">
