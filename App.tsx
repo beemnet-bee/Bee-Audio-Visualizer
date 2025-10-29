@@ -9,6 +9,11 @@ export interface TimedLyric {
   text: string;
 }
 
+export interface Resolution {
+    width: number;
+    height: number;
+}
+
 const App: React.FC = () => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -25,6 +30,7 @@ const App: React.FC = () => {
   const [barCount, setBarCount] = useState<number>(128);
   const [smoothing, setSmoothing] = useState<number>(0.5);
   const [barStyle, setBarStyle] = useState<BarStyle>('rounded');
+  const [visualizerPosition, setVisualizerPosition] = useState<number>(50);
 
   // Background settings
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
@@ -39,8 +45,13 @@ const App: React.FC = () => {
     fontSize: 32,
     fontColor: '#FFFFFF',
     highlightColor: 'rgba(224, 64, 251, 0.4)',
-    position: 'middle',
+    positionY: 50,
+    positionX: 50,
+    fontFamily: 'Ubuntu, sans-serif'
   });
+  
+  // Output settings
+  const [resolution, setResolution] = useState<Resolution>({ width: 1920, height: 1080 });
 
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
@@ -129,6 +140,11 @@ const App: React.FC = () => {
     if (!audioFile || !audioElementRef.current || !canvasRef.current || isRecording) return;
 
     setIsRecording(true);
+    
+    // Ensure canvas has the correct dimensions before capturing
+    canvasRef.current.width = resolution.width;
+    canvasRef.current.height = resolution.height;
+
     audioElementRef.current.currentTime = 0;
     
     if (!isAudioContextSetup.current) {
@@ -273,6 +289,8 @@ const App: React.FC = () => {
                 barStyle={barStyle}
                 activeLyric={activeLyricIndex > -1 ? timedLyrics[activeLyricIndex] : null}
                 lyricSettings={lyricSettings}
+                resolution={resolution}
+                visualizerPosition={visualizerPosition}
               />
             </div>
           )}
@@ -318,6 +336,10 @@ const App: React.FC = () => {
                 lyricSettings={lyricSettings}
                 onLyricSettingsChange={setLyricSettings}
                 activeLyricIndex={activeLyricIndex}
+                resolution={resolution}
+                onResolutionChange={setResolution}
+                visualizerPosition={visualizerPosition}
+                onVisualizerPositionChange={setVisualizerPosition}
             />
             </footer>
         )}

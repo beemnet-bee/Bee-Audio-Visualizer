@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { TimedLyric } from '../App';
+import { TimedLyric, Resolution } from '../App';
 import { LyricSettings } from './Controls';
 
 export type VisualizerType = 'bar' | 'bar-center' | 'circle' | 'wave' | 'wave-fill';
@@ -21,6 +21,8 @@ interface VisualizerProps {
   barStyle: BarStyle;
   activeLyric: TimedLyric | null;
   lyricSettings: LyricSettings;
+  resolution: Resolution;
+  visualizerPosition: number; // 0-100
 }
 
 const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({ 
@@ -38,7 +40,9 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
   backgroundBlur,
   barStyle,
   activeLyric,
-  lyricSettings
+  lyricSettings,
+  resolution,
+  visualizerPosition
 }, ref) => {
   const animationFrameIdRef = useRef<number>(0);
   const prevDataRef = useRef<number[]>([]);
@@ -113,7 +117,11 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
       // Set glow effect for visualizer elements
       canvasCtx.shadowBlur = 10;
       canvasCtx.shadowColor = useGradient ? color : color;
-
+      
+      canvasCtx.save();
+      
+      const verticalOffset = ((visualizerPosition - 50) / 50) * (canvas.height / 4);
+      canvasCtx.translate(0, verticalOffset);
 
       // Call drawing function based on type
       switch (type) {
@@ -134,6 +142,8 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
           break;
       }
       
+      canvasCtx.restore();
+
       // Reset glow effect before drawing lyrics
       canvasCtx.shadowBlur = 0;
       canvasCtx.shadowColor = 'transparent';
@@ -157,7 +167,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         const cornerRadius = barStyle === 'rounded' ? barWidth / 2 : 0;
         let x = 0;
         for (let i = 0; i < barCount; i++) {
-            const barHeight = Math.max(cornerRadius * 2, applySmoothing((data[i] / 255) * h, i));
+            const barHeight = Math.max(cornerRadius * 2, applySmoothing((data[i] / 255) * (h * 0.8), i));
             ctx.beginPath();
             ctx.roundRect(x, h - barHeight, barWidth, barHeight, [cornerRadius, cornerRadius, 0, 0]);
             ctx.fill();
@@ -171,7 +181,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         const cornerRadius = barStyle === 'rounded' ? barWidth / 2 : 0;
         let x = 0;
         for (let i = 0; i < barCount; i++) {
-            const barHeight = Math.max(cornerRadius * 2, applySmoothing((data[i] / 255) * h, i));
+            const barHeight = Math.max(cornerRadius * 2, applySmoothing((data[i] / 255) * h * 0.8, i));
             ctx.beginPath();
             ctx.roundRect(x, (h - barHeight) / 2, barWidth, barHeight, cornerRadius);
             ctx.fill();
@@ -210,10 +220,11 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
         ctx.beginPath();
         const sliceWidth = w * 1.0 / bufferLength;
         let x = 0;
+        const centerY = h / 2;
 
         for (let i = 0; i < bufferLength; i++) {
-            const v = data[i] / 128.0;
-            const y = v * h / 2;
+            const v = (data[i] - 128) / 128.0; // Waveform data is signed, goes from -1 to 1
+            const y = centerY + v * (h / 4);
             if (i === 0) {
                 ctx.moveTo(x, y);
             } else {
@@ -221,14 +232,14 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
             }
             x += sliceWidth;
         }
-        ctx.lineTo(canvas.width, canvas.height / 2);
-
+        
         if (isFilled) {
           ctx.lineTo(w, h);
           ctx.lineTo(0, h);
           ctx.closePath();
           ctx.fill();
         } else {
+          ctx.lineTo(w, centerY);
           ctx.stroke();
         }
     };
@@ -236,13 +247,12 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
     const drawLyrics = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
       if (!activeLyric) return;
       
-      ctx.font = `bold ${lyricSettings.fontSize}px 'Ubuntu', sans-serif`;
+      ctx.font = `bold ${lyricSettings.fontSize}px '${lyricSettings.fontFamily}'`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       
-      let yPos = h / 2;
-      if (lyricSettings.position === 'top') yPos = lyricSettings.fontSize * 1.5;
-      if (lyricSettings.position === 'bottom') yPos = h - (lyricSettings.fontSize * 1.5);
+      const xPos = w * (lyricSettings.positionX / 100);
+      const yPos = h * (lyricSettings.positionY / 100);
 
       // Draw highlight background
       const textMetrics = ctx.measureText(activeLyric.text);
@@ -252,7 +262,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
       ctx.save();
       ctx.beginPath();
       ctx.roundRect(
-          (w - textMetrics.width) / 2 - padding,
+          xPos - (textMetrics.width / 2) - padding,
           yPos - (lyricSettings.fontSize / 2) - padding,
           textMetrics.width + (padding * 2),
           lyricSettings.fontSize + (padding * 2),
@@ -265,7 +275,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
       ctx.fillStyle = lyricSettings.fontColor;
       ctx.shadowColor = 'black';
       ctx.shadowBlur = 5;
-      ctx.fillText(activeLyric.text, w / 2, yPos);
+      ctx.fillText(activeLyric.text, xPos, yPos);
     };
 
     draw();
@@ -273,36 +283,25 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
     return () => {
       cancelAnimationFrame(animationFrameIdRef.current);
     };
-  }, [analyserNode, isPlaying, barCount, color, color2, useGradient, type, smoothing, ref, bgImage, backgroundColor, backgroundOpacity, backgroundBlur, barStyle, activeLyric, lyricSettings]);
+  }, [analyserNode, isPlaying, barCount, color, color2, useGradient, type, smoothing, ref, bgImage, backgroundColor, backgroundOpacity, backgroundBlur, barStyle, activeLyric, lyricSettings, visualizerPosition]);
   
-  // Handle canvas resizing
+  // Handle canvas resolution change
   useEffect(() => {
     const canvas = (ref as React.RefObject<HTMLCanvasElement>)?.current;
-    if (!canvas) return;
-    const parent = canvas.parentElement;
-    if (!parent) return;
-
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
-        const { width, height } = entry.contentRect;
-        canvas.width = width;
-        canvas.height = Math.max(320, height);
-      }
-    });
-
-    resizeObserver.observe(parent);
-
-    // Initial size
-    canvas.width = parent.clientWidth;
-    canvas.height = Math.max(320, parent.clientHeight);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [ref]);
+    if (canvas) {
+      canvas.width = resolution.width;
+      canvas.height = resolution.height;
+    }
+  }, [resolution, ref]);
 
 
-  return <div className="w-full h-96 bg-black/20 rounded-lg overflow-hidden shadow-inner shadow-black/50"><canvas ref={ref} className="w-full h-full" /></div>;
+  const aspectRatio = resolution.width / resolution.height;
+
+  return (
+    <div className="w-full bg-black/20 rounded-lg overflow-hidden shadow-inner shadow-black/50" style={{ aspectRatio: `${aspectRatio}` }}>
+        <canvas ref={ref} className="w-full h-full object-contain" />
+    </div>
+  );
 });
 
 export default Visualizer;
