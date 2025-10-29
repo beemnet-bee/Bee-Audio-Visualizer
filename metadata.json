@@ -1,5 +1,5 @@
 {
   "name": "GB - Audio Visualizer",
-  "description": "An interactive music visualizer that generates animated visuals from an uploaded audio file. Customize visualizer styles (bars, waves, particles), add brand logos, sync lyrics, and apply background effects. Perfect for creating engaging videos for YouTube and social media.",
+  "description": "Create stunning, professional music visualizations with a beautiful, interactive interface. Features a dynamic 'Aurora' theme, glassmorphism UI, and advanced creative tools like particle effects, logo watermarking, and synced lyrics. Export high-resolution videos perfect for YouTube and social media.",
   "requestFramePermissions": []
 }

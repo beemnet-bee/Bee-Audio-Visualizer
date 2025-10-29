@@ -64,6 +64,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const particlesRef = useRef<Particle[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (backgroundImage) {
@@ -87,6 +88,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
     const canvas = (ref as React.RefObject<HTMLCanvasElement>)?.current;
     if (!analyserNode || !isPlaying || !canvas) {
       cancelAnimationFrame(animationFrameIdRef.current);
+      if(containerRef.current) containerRef.current.style.boxShadow = `inset 0 0 0px 0px ${color}`;
       return;
     }
     
@@ -99,6 +101,13 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
     const draw = () => {
       animationFrameIdRef.current = requestAnimationFrame(draw);
       
+      analyserNode.getByteFrequencyData(dataArray);
+      
+      // Update glow effect based on bass
+      const bass = dataArray.slice(0, 10).reduce((a, b) => a + b) / 10;
+      const glowIntensity = Math.min(25, (bass / 255) * 50);
+      if(containerRef.current) containerRef.current.style.boxShadow = `inset 0 0 ${glowIntensity}px 2px ${color}`;
+
       canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
       canvasCtx.fillStyle = backgroundColor;
       canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
@@ -113,11 +122,12 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
       if (backgroundVignette) drawVignette(canvasCtx, canvas.width, canvas.height);
       if (backgroundNoise > 0) drawNoise(canvasCtx, canvas.width, canvas.height, backgroundNoise);
 
-
-      if (type !== 'progress-wave') {
-        if (type === 'wave' || type === 'wave-fill' || type === 'particles') analyserNode.getByteTimeDomainData(dataArray);
-        else analyserNode.getByteFrequencyData(dataArray);
+      // FIX: The logic for getting analyzer data was flawed, causing type errors and incorrect visualizations.
+      // This has been corrected to provide the right data for each visualizer type.
+      if (type === 'wave' || type === 'wave-fill') {
+        analyserNode.getByteTimeDomainData(dataArray);
       }
+      // For other types, frequency data is already in dataArray from the call at the start of draw().
       
       if (prevDataRef.current.length !== barCount) prevDataRef.current = new Array(barCount).fill(0);
 
@@ -346,7 +356,7 @@ const Visualizer = React.forwardRef<HTMLCanvasElement, VisualizerProps>(({
   const aspectRatio = resolution.width / resolution.height;
 
   return (
-    <div className="w-full bg-black rounded-lg overflow-hidden shadow-inner" style={{ aspectRatio: `${aspectRatio}` }}>
+    <div ref={containerRef} className="w-full bg-black/20 rounded-lg overflow-hidden shadow-inner relative transition-shadow duration-300" style={{ aspectRatio: `${aspectRatio}` }}>
         <canvas ref={ref} className="w-full h-full object-contain" />
     </div>
   );

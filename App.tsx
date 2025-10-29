@@ -27,8 +27,8 @@ const App: React.FC = () => {
   
   // Visualizer settings
   const [visualizerType, setVisualizerType] = useState<VisualizerType>('bar');
-  const [visualizerColor, setVisualizerColor] = useState<string>('#007BFF');
-  const [color2, setColor2] = useState<string>('#4DABFF');
+  const [visualizerColor, setVisualizerColor] = useState<string>('#3b82f6');
+  const [color2, setColor2] = useState<string>('#a855f7');
   const [useGradient, setUseGradient] = useState<boolean>(true);
   const [barCount, setBarCount] = useState<number>(128);
   const [smoothing, setSmoothing] = useState<number>(0.5);
@@ -49,8 +49,8 @@ const App: React.FC = () => {
   const [activeLyricIndex, setActiveLyricIndex] = useState<number>(-1);
   const [lyricSettings, setLyricSettings] = useState<LyricSettings>({
     fontSize: 32,
-    fontColor: '#212529',
-    highlightColor: 'rgba(0, 123, 255, 0.15)',
+    fontColor: '#1f2937',
+    highlightColor: 'rgba(255, 255, 255, 0.4)',
     positionY: 50,
     positionX: 50,
     fontFamily: 'Ubuntu, sans-serif'
@@ -81,7 +81,7 @@ const App: React.FC = () => {
   const isAudioContextSetup = useRef<boolean>(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2500);
+    const timer = setTimeout(() => setShowSplash(false), 2800);
     return () => clearTimeout(timer);
   }, []);
 
@@ -280,24 +280,24 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 lg:p-6">
-      <div className="w-full max-w-6xl bg-white rounded-xl shadow-2xl shadow-gray-200 overflow-hidden flex flex-col border border-gray-200">
-        <header className="p-5 border-b border-gray-200 flex items-center space-x-4">
-          <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-md">
-            <Icon name="logo" className="w-9 h-9 text-white" />
+    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 lg:p-6 transition-opacity duration-500">
+      <div className="w-full max-w-7xl bg-white/40 backdrop-blur-2xl rounded-2xl shadow-2xl shadow-blue-500/10 overflow-hidden flex flex-col border border-white/30">
+        <header className="p-5 flex items-center space-x-4">
+          <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center shadow-lg">
+            <Icon name="logo" className="w-10 h-10 text-white" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-800 tracking-wide">GB - Audio Visualizer</h1>
-            <p className="text-sm text-gray-500">Create stunning, lyric-synced visuals for your music</p>
+            <p className="text-sm text-gray-600">Create stunning, lyric-synced visuals for your music</p>
           </div>
         </header>
 
-        <main className="flex-grow p-6 bg-gray-50/50">
+        <main className="flex-grow p-6">
           {!audioFile ? (
             <FileUpload onFileChange={handleFileChange} />
           ) : (
             <div className="flex flex-col space-y-6">
-              <div className="text-center bg-gray-100 p-3 rounded-lg border border-gray-200">
+              <div className="text-center bg-white/50 p-3 rounded-lg border border-white/20">
                 <p className="font-medium text-blue-600 text-sm">Now playing</p>
                 <p className="truncate text-gray-700 font-semibold">{fileName}</p>
               </div>
@@ -336,7 +336,7 @@ const App: React.FC = () => {
         </main>
         
         {audioFile && (
-            <footer className="p-6 bg-white border-t border-gray-200">
+            <footer className="p-6 bg-white/20 border-t border-white/30">
             <Controls
                 isPlaying={isPlaying}
                 onPlayPause={togglePlayPause}
