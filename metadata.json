@@ -1,0 +1,5 @@
+{
+  "name": "Audio Visualizer Bar Generator",
+  "description": "An interactive music visualizer that generates animated bars from an uploaded audio file. Customize the color and style of the visualization, perfect for creating engaging backgrounds for YouTube videos.",
+  "requestFramePermissions": []
+}
